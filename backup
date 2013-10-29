@@ -1,5 +1,5 @@
 #!/bin/bash
-# Version 2.3.2 updated 10/28/13
+# Version 2.4 updated 10/28/13
 
 ## GLOBAL CONSTANTS ##
 
@@ -25,47 +25,74 @@ OPTIONS:
 HELPMESSAGE
 } # Call exit after function call
 
-# Process arguments
+# Process arguments with getopts
 full=0 # default is partial backup
 overwrite=0
 restoreBack=0
 
-for arg; do
-	if [[ "$arg" = "--help" ]]; then
-		helpMenu
-		exit 0
-	fi
-	
-	c=${arg:0:1}
-	arg=${arg:1}
+while getopts "fhor:" OPTION; do
+#	if [[ "$arg" = "--help" ]]; then
+#		helpMenu
+#		exit 0
+#	fi
 
-	if [[ "$c" = "-" ]]; then
-		while test -n "$arg"; do
-			k=${arg:0:1}
-
-			if [ "$k" = "h" ]; then
-				helpMenu
-				exit 0
-			elif [ "$k" = "f" ]; then # set to full backup
-				full=1
-			elif [ "$k" = "o" ]; then # set to overwrite mode
-				overwrite=1
-			elif [ "$k" = "r" ]; then
-				restoreBack=1
-			else
-				echo "backup: invalid option -- '$k'"
-				echo "Try 'backup --help' for more information."
-				exit 1
-			fi
-			arg=${arg:1} # Trim the 1st character
-		done
-
-	else
-		echo "backup: invalid argument"
-		echo "Try 'backup --help' for more information."
-		exit 1
-	fi
+	case $OPTION in
+		h)
+			helpMenu
+			exit 0
+			;;
+		f) # set to full backup
+			full=1
+			;;
+		o) # set to overwrite mode
+			overwrite=1
+			;;
+		r)
+			restoreBack=$OPTARG
+			;;
+		?)
+			helpMenu # call funciton
+			exit 1
+			;;
+	esac
 done
+
+#for arg; do
+#	if [[ "$arg" = "--help" ]]; then
+#		helpMenu
+#		exit 0
+#	fi
+#	
+#	c=${arg:0:1}
+#	arg=${arg:1}
+#
+#	if [[ "$c" = "-" ]]; then
+#		while test -n "$arg"; do
+#			k=${arg:0:1}
+#
+#			if [ "$k" = "h" ]; then
+#				helpMenu
+#				exit 0
+#			elif [ "$k" = "f" ]; then # set to full backup
+#				full=1
+#			elif [ "$k" = "o" ]; then # set to overwrite mode
+#				overwrite=1
+#			elif [ "$k" = "r" ]; then
+#				restoreBack=1
+#			else
+#				echo "backup: invalid option -- '$k'"
+#				echo "Try 'backup --help' for more information."
+#				exit 1
+#			fi
+#			arg=${arg:1} # Trim the 1st character
+#		done
+#
+#	else
+#		echo "backup: invalid argument"
+#		echo "Try 'backup --help' for more information."
+#		exit 1
+#	fi
+#done
 
 echo "Backup script"
 

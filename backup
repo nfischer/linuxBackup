@@ -9,6 +9,7 @@ PARTIALTHRESH=1000000 # folders larger than this won't be backed up for partial 
 DEFAULTPASS="heckuva" # change this to change your password
 ACCEPTPASS=1 # change to 0 if you don't want to be prompted for a password
 
+
 ## DO NOT CHANGE BELOW THIS LINE ##
 
 usage()

@@ -11,7 +11,7 @@ ACCEPTPASS=1 # change to 0 if you don't want to be prompted for a password
 
 ## DO NOT CHANGE BELOW THIS LINE ##
 
-helpMenu()
+usage()
 {
 cat << HELPMESSAGE
 Usage: backup [OPTION]...
@@ -32,7 +32,7 @@ restoreBack=0
 
 for arg; do
 	if [[ "$arg" = "--help" ]]; then
-		helpMenu
+		usage
 		exit 0
 	fi
 	
@@ -44,7 +44,7 @@ for arg; do
 			k=${arg:0:1}
 
 			if [ "$k" = "h" ]; then
-				helpMenu
+				usage
 				exit 0
 			elif [ "$k" = "f" ]; then # set to full backup
 				full=1

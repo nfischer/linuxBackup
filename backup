@@ -13,7 +13,7 @@ ACCEPTPASS=1 # change to 0 if you don't want to be prompted for a password
 
 helpMenu()
 {
-cat << HELPMESSAGE
+cat << EOF
 Usage: backup [OPTION]...
 
 Backs up files and subdirectories located in a user's home folder
@@ -22,7 +22,7 @@ OPTIONS:
   -h, --help        display this help menu
   -o                overwrite the directory named with the given date
   -r, --restore     restore an existing backup
-HELPMESSAGE
+EOF
 } # Call exit after function call
 
 # Process arguments with getopts

@@ -6,7 +6,7 @@
 # Users may change the constants in this section
 
 PARTIALTHRESH=1000000 # folders larger than this won't be backed up for partial backups (default 1M)
-DEFAULTPASS="heckuva" # change this to change your password
+DEFAULTPASS="raspberry" # change this to change your password
 ACCEPTPASS=1 # change to 0 if you don't want to be prompted for a password
 
 ## DO NOT CHANGE BELOW THIS LINE ##
@@ -130,19 +130,7 @@ done
 
 echo "Backup script"
 
-## Help Function
-#if [[ $helpMenu = 1 ]]; then
-#	echo "Help Menu"
-#	echo "Under construction"
-#	echo "Usage: backup [OPTION]..."
-#	echo -e "Backs up files and subdirectories located in /home/pi\n"
-#	echo "  -f			    backup all files and subdirectories"
-#	echo "  -h, --help		    display this help menu"
-#	echo -e "  -o			    overwrite the directory named with the given date\n"
-#	exit 0
-#fi
-
-# Password
+# Password function
 getPassword
 
 # Get date and time of backup
@@ -277,6 +265,7 @@ fi
 echo "Copying your files to drive"
 cd $folderName
 
+echo "User: $(whoami)" >> info.txt
 echo "These files were backed up on $rightNow" >> info.txt
 
 if [ $full = 1 ]; then

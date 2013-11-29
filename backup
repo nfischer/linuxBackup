@@ -13,7 +13,8 @@ ACCEPTPASS=1 # change to 0 if you don't want to be prompted for a password
 
 helpMenu()
 {
-cat << EOF
+# Here-doc to stdout
+cat 1>&2 << "EOF"
 Usage: backup [OPTION]...
 
 Backs up files and subdirectories located in a user's home folder
@@ -25,17 +26,43 @@ OPTIONS:
 EOF
 } # Call exit after function call
 
+getPassword()
+{
+	failCount=0
+	
+	if [[ $ACCEPTPASS = 1 ]]; then # check for password
+		while [[ $failCount < 3 ]]; do
+			read -s -p "password: " passEntered
+			echo ""
+			if [[ "$passEntered" = "$DEFAULTPASS" ]]; then
+				break
+			else
+				echo "Incorrect password"
+				let failCount=$failCount+1
+				if [[ $failCount = 3 ]]; then
+					echo "Goodbye"
+					exit 0
+				else
+					numTries=$((3-$failCount))
+					if [[ $numTries = 1 ]]; then
+						echo "You have $numTries more try"
+					else
+						echo "You have $numTries more tries"
+					fi
+				fi
+			fi
+		done
+	fi
+}
+
 # Process arguments with getopts
 full=0 # default is partial backup
 overwrite=0
 restoreBack=0
+isTarred=0
+folderName="" # empty string
 
-while getopts "fhor:" OPTION; do
-#	if [[ "$arg" = "--help" ]]; then
-#		helpMenu
-#		exit 0
-#	fi
-
+while getopts "fhor:tn" OPTION; do
 	case $OPTION in
 		h)
 			helpMenu
@@ -50,6 +77,13 @@ while getopts "fhor:" OPTION; do
 		r)
 			restoreBack=$OPTARG
 			;;
+		t)
+			isTarred=1
+			;;
+		n)
+			folderName=$OPTARG
+			;;
+
 		?)
 			helpMenu # call funciton
 			exit 1
@@ -109,15 +143,7 @@ echo "Backup script"
 #fi
 
 # Password
-if [[ $ACCEPTPASS = 1 ]]; then # check for password
-	read -s -p "password: " passEntered
-	echo ""
-	if [ "$passEntered" != "$DEFAULTPASS" ]; then
-		echo "Incorrect password"
-		echo "Goodbye"
-		exit 0
-	fi
-fi
+getPassword
 
 # Get date and time of backup
 echo "Accessing current date" 
@@ -190,14 +216,20 @@ else
 	cd backup
 fi
 
-foldername="$(whoami)$rightNow"
+modifyName=0
+if [[ -z $folderName ]]; then
+	folderName="$(whoami)$rightNow"
+	modifyName=1
+fi
 
-if [ "$full" = 1 ]; then # full backup
+if [[ "$full" = 1 ]]; then # full backup
 	echo "Performing a FULL backup"
 	while [ true ]; do
 		read -p "Are you sure? " sureness
 		if [[ "$sureness" = "y" || "$sureness" = "yes" ]]; then
-			foldername=$foldername"f"
+ 			if [[ $modifyName = 1 ]]; then
+				folderName=$folderName"f"
+			fi
 			break
 		elif [[ "$sureness" = "n" || "$sureness" = "no" ]]; then
 			echo "Terminating script"
@@ -211,16 +243,16 @@ else
 	echo "Performing a PARTIAL backup"
 fi
 
-if [ -d $foldername ]; then
+if [ -d $folderName ]; then
 	if [[ $overwrite = 1 ]]; then # Over write directory
-		rm -r $foldername
+		rm -r $folderName
 	else
-		echo "Folder $foldername already exists."
+		echo "Folder $folderName already exists."
 		while [ true ]; do
 			read -p "Would you like to backup anyway? (y/n) " override 
 			if [ "$override" = "y" ]; then
-				while [ -d "$foldername" ]; do
-					foldername=$foldername"a"
+				while [ -d "$folderName" ]; do
+					folderName=$folderName"a"
 				done
 				break
 			elif [ "$override" = "n" ]; then
@@ -234,16 +266,16 @@ if [ -d $foldername ]; then
 	fi
 fi
 
-echo "Creating folder $foldername"
-mkdir $foldername
+echo "Creating folder $folderName"
+mkdir $folderName
 if [ $? != 0 ]; then
-	echo "Error in creating folder $foldername. Terminating script."
+	echo "Error in creating folder $folderName. Terminating script."
 	exit 1
 fi
 
 # Copy files onto drive and document
 echo "Copying your files to drive"
-cd $foldername
+cd $folderName
 
 echo "These files were backed up on $rightNow" >> info.txt
 

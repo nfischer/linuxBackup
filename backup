@@ -1,5 +1,5 @@
 #!/bin/bash
-# Version 2.4 updated 10/28/13
+# Version 3.0 updated 12/14/13
 
 ## GLOBAL CONSTANTS ##
 
@@ -24,12 +24,6 @@ OPTIONS:
   -r, --restore     restore an existing backup
 EOF
 } # Call exit after function call
-
-<<<<<<< HEAD
-# Process arguments
-full=0 # default is partial backup
-overwrite=0
-restoreBack=0
 
 getEnv() # gets the environment the script is run on
 {

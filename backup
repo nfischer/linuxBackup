@@ -199,7 +199,7 @@ echo "The current date is $rightNow"
 IFS='
 '
 
-if [ "$SYS" = "Linux" ] && [ "$VERSION" = "Ubuntu 13.10" ]; then
+if [[ "$SYS" = "Linux" ]] && [[ "$VERSION" = "Ubuntu 13"* ]]; then
 	driveArray=(`ls /media/$CUR_USER/`)
 elif [ "$SYS" = "Linux" ]; then # normal drive array
 	driveArray=(`ls /media/`)

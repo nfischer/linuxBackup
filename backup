@@ -6,7 +6,6 @@
 # Users may change the constants in this section
 
 PARTIALTHRESH=1000000 # folders larger than this won't be backed up for partial backups (default 1M)
-DEFAULTPASS="raspberry" # change this to change your password
 ACCEPTPASS=1 # change to 0 if you don't want to be prompted for a password
 
 ## DO NOT CHANGE BELOW THIS LINE ##
@@ -26,15 +25,49 @@ OPTIONS:
 EOF
 } # Call exit after function call
 
+getEnv() # gets the environment the script is run on
+{
+	SYS=$(uname -s)
+	if [ $SYS = "Linux" ]; then # version is pertinent
+		VERSION=$(cat /etc/lsb-release | grep -i DISTRIB_ID | sed 's/DISTRIB_ID=//')
+		VERSION="$VERSION $(cat /etc/lsb-release | grep -i DISTRIB_RELEASE | sed 's/DISTRIB_RELEASE=//')"
+	fi
+	CUR_USER=$(whoami)
+}
+
+newPass()
+{
+	numTries=0
+	while [ $numTries -lt 2 ]; do
+		read -s -p "Enter your new password: " firstPass
+		echo -en "\n" # print newline
+		read -s -p "Confirm your password: " secondPass
+		echo -en "\n" # print newline
+		if [ $firstPass == $secondPass ]; then
+			echo "$firstPass" > ~/.bpass
+			chmod 600 ~/.bpass # prevent peekers
+			break
+		elif [ $numTries = 3 ]; then
+			echo "Error: Too many attempts. Exiting with status (1)." >&2
+			exit 1
+		else
+			numTries=$(($numTries+1))
+			echo "Error: Passwords didn't match" >&2
+		fi
+	done
+}
+
 getPassword()
 {
 	failCount=0
+	
+	SAVEDPASS=$(head -n 1 ~/.bpass)
 	
 	if [[ $ACCEPTPASS = 1 ]]; then # check for password
 		while [[ $failCount < 3 ]]; do
 			read -s -p "password: " passEntered
 			echo ""
-			if [[ "$passEntered" = "$DEFAULTPASS" ]]; then
+			if [[ "$passEntered" = "$SAVEDPASS" ]]; then
 				break
 			else
 				echo "Incorrect password"
@@ -62,7 +95,8 @@ restoreBack=0
 isTarred=0
 folderName="" # empty string
 
-while getopts "fhor:tn" OPTION; do
+## options ##
+while getopts "fhor:tnp" OPTION; do
 	case $OPTION in
 		h)
 			helpMenu
@@ -82,6 +116,12 @@ while getopts "fhor:tn" OPTION; do
 			;;
 		n)
 			folderName=$OPTARG
+			;;
+		p)
+			echo -en "You will be prompted for your old password before "
+			echo -en "you can select a new password.\n"
+			getPassword # returns if success
+			newPass # also returns upon success
 			;;
 
 		?)
@@ -128,15 +168,30 @@ done
 #	fi
 #done
 
+##########
+## main ##
+##########
+
 echo "Backup script"
+getEnv # gets information regarding the system this is run under
 
 # Password function
-getPassword
+# Check for current password
+if [ ! -f ~/.bpass ] || [ "" = $(head -n 1 ~/.bpass) ]; then
+	# NEW PASSWORD
+	echo "You need to set your password"
+	newPass # function
+	# newPass() was success if returns here
+else
+	getPassword
+fi
+
 
 # Get date and time of backup
 echo "Accessing current date" 
 rightNow=$(date +"%m_%d_%Y")
 echo "The current date is $rightNow"
+
 
 # Select drive to backup onto
 
@@ -144,11 +199,20 @@ echo "The current date is $rightNow"
 IFS='
 '
 
-driveArray=(`ls /media`)
+if [ "$SYS" = "Linux" ] && [ "$VERSION" = "Ubuntu 13.10" ]; then
+	driveArray=(`ls /media/$CUR_USER/`)
+elif [ "$SYS" = "Linux" ]; then # normal drive array
+	driveArray=(`ls /media/`)
+elif [ "$SYS" = "Darwin" ]; then # Mac computer
+	driveArray=(`ls /Volumes`)
+else
+	echo "Environment could not be detected. Exiting with status (2)." >&2
+	exit 2
+fi
 
 arrLen=${#driveArray[@]}
 if [[ $arrLen = 0 ]]; then
-	echo "Error: no external drive connected. Terminating script"
+	echo "Error: no external drive connected. Terminating script" >&2
 	exit 1
 elif [[ $arrLen = 1 ]]; then
 	driveName=${driveArray[0]}
@@ -162,7 +226,8 @@ else
 		echo "$c: $k"
 		let c++
 	done
-	echo "$c: [Select to cancel]"
+	echo "$c: [Choose folder on local drive]"
+	echo "$(($c+1)): [Select to cancel]"
 
 	# Prompt for selection
 	while true; do
@@ -187,7 +252,7 @@ if [ $? = 0 ]; then # cd was successful
 fi
 
 if [ $drivePresent = 0 ]; then # Error with drive / drive not present
-	echo "There was an error in locating your drive. Terminating script"
+	echo "There was an error in locating your drive. Terminating script" >&2
 	exit 1
 fi
 
@@ -198,7 +263,7 @@ if [ -d backup ]; then
 else
 	mkdir backup
 	if [ $? != 0 ]; then
-		echo "Error in creating backup directory. Terminating script."
+		echo "Error in creating backup directory. Terminating script." >&2
 		exit 1
 	fi
 	cd backup
@@ -206,7 +271,7 @@ fi
 
 modifyName=0
 if [[ -z $folderName ]]; then
-	folderName="$(whoami)$rightNow"
+	folderName="$CUR_USER$rightNow"
 	modifyName=1
 fi
 
@@ -257,7 +322,7 @@ fi
 echo "Creating folder $folderName"
 mkdir $folderName
 if [ $? != 0 ]; then
-	echo "Error in creating folder $folderName. Terminating script."
+	echo "Error in creating folder $folderName. Terminating script." >&2
 	exit 1
 fi
 
@@ -265,7 +330,7 @@ fi
 echo "Copying your files to drive"
 cd $folderName
 
-echo "User: $(whoami)" >> info.txt
+echo "User: $CUR_USER" >> info.txt
 echo "These files were backed up on $rightNow" >> info.txt
 
 if [ $full = 1 ]; then

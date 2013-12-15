@@ -376,7 +376,7 @@ for k in $(find ~ -maxdepth 1 -not -name ".*" -type f); do # Miscellaneous files
 done
 
 if [[ $miscFiles = 1 ]]; then
-	echo " -miscellaneous files in /home/pi directory" >> info.txt
+	echo " -miscellaneous files in /home/$CUR_USER directory" >> info.txt
 fi
 
 

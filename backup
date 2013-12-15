@@ -199,16 +199,17 @@ IFS='
 '
 
 if [[ "$SYS" = "Linux" ]] && [[ "$VERSION" = "Ubuntu 13"* ]]; then
-	driveArray=(`ls /media/$CUR_USER/`)
+	allMedia="/media/$CUR_USER"
 elif [ "$SYS" = "Linux" ]; then # normal drive array
-	driveArray=(`ls /media/`)
+	allMedia="/media"
 elif [ "$SYS" = "Darwin" ]; then # Mac computer
-	driveArray=(`ls /Volumes`)
+	allMedia="/Volumes"
 else
 	echo "Environment could not be detected. Exiting with status (2)." >&2
 	exit 2
 fi
 
+driveArray=(`ls $allMedia`)
 arrLen=${#driveArray[@]}
 if [[ $arrLen = 0 ]]; then
 	echo "Error: no external drive connected. Terminating script" >&2
@@ -245,7 +246,7 @@ else
 fi
 
 drivePresent=0 # default is false
-cd /media/$driveName
+cd "$allMedia/$driveName"
 if [ $? = 0 ]; then # cd was successful
 	drivePresent=1
 fi

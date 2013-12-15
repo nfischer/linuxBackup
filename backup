@@ -37,7 +37,7 @@ getEnv() # gets the environment the script is run on
 newPass()
 {
 	numTries=0
-	while [ $numTries -lt 2 ]; do
+	while [ $numTries -lt 3 ]; do
 		read -s -p "Enter your new password: " firstPass
 		echo -en "\n" # print newline
 		read -s -p "Confirm your password: " secondPass
@@ -46,7 +46,7 @@ newPass()
 			echo "$firstPass" > ~/.bpass
 			chmod 600 ~/.bpass # prevent peekers
 			break
-		elif [ $numTries = 3 ]; then
+		elif [ $numTries = 2 ]; then
 			echo "Error: Too many attempts. Exiting with status (1)." >&2
 			exit 1
 		else
@@ -59,12 +59,18 @@ newPass()
 getPassword()
 {
 	failCount=0
+	promptText=$1
+	if [[ -z $promptText ]]; then
+		echo -en "Internal error: function called with no argument. " >&2
+		echo -en "Exiting with status (2).\n" >&2
+		exit 2
+	fi
 	
 	SAVEDPASS=$(head -n 1 ~/.bpass)
 	
 	if [[ $ACCEPTPASS = 1 ]]; then # check for password
 		while [[ $failCount < 3 ]]; do
-			read -s -p "password: " passEntered
+			read -s -p "$promptText: " passEntered
 			echo ""
 			if [[ "$passEntered" = "$SAVEDPASS" ]]; then
 				break
@@ -98,7 +104,7 @@ folderName="" # empty string
 while getopts "fhor:tnp" OPTION; do
 	case $OPTION in
 		h)
-			helpMenu
+			helpMenu # function call
 			exit 0
 			;;
 		f) # set to full backup
@@ -119,7 +125,8 @@ while getopts "fhor:tnp" OPTION; do
 		p)
 			echo -en "You will be prompted for your old password before "
 			echo -en "you can select a new password.\n"
-			getPassword # returns if success
+			#optionalPromptText="Old "
+			getPassword "Old password" # returns if success
 			newPass # also returns upon success
 			;;
 
@@ -182,15 +189,13 @@ if [ ! -f ~/.bpass ] || [ "" = $(head -n 1 ~/.bpass) ]; then
 	newPass # function
 	# newPass() was success if returns here
 else
-	getPassword
+	getPassword "password"
 fi
-
 
 # Get date and time of backup
 echo "Accessing current date" 
 rightNow=$(date +"%m_%d_%Y")
 echo "The current date is $rightNow"
-
 
 # Select drive to backup onto
 
@@ -232,9 +237,16 @@ else
 	# Prompt for selection
 	while true; do
 		read -p "Select your drive by number: " driveNum
-		if [[ $driveNum = $arrLen ]]; then
+		if [[ $driveNum = $(($arrLen + 1)) ]]; then
 			echo "Terminating script"
 			exit 0
+		elif [[ $driveNum = $arrLen ]]; then
+			# backup onto folder on local drive
+			echo -en "" # do nothing
+			exit 3 # DEBUG
+
+
+		
 		elif [[ $driveNum -gt -1 && $driveNum -lt $arrLen ]]; then
 			# Valid drive number
 			driveName="${driveArray[$driveNum]}"
@@ -367,8 +379,8 @@ if [[ $miscFiles = 1 ]]; then
 	echo " -miscellaneous files in /home/pi directory" >> info.txt
 fi
 
-echo "Backup completed"
 
+echo "Backup completed"
 exit 0
 
 

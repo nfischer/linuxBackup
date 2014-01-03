@@ -6,14 +6,13 @@
 # Users may change the constants in this section
 
 PARTIALTHRESH=1000000 # folders larger than this won't be backed up for partial backups (default 1M)
-ACCEPTPASS=1 # change to 0 if you don't want to be prompted for a password
 
 ## DO NOT CHANGE BELOW THIS LINE ##
 
 usage()
 {
 # Here-doc to stdout
-cat 1>&2 << "EOF"
+cat 1>&2 << EOF
 Usage: backup [OPTION]...
 
 Backs up files and subdirectories located in a user's home folder
@@ -27,11 +26,11 @@ EOF
 
 getEnv() # gets the environment the script is run on
 {
-	SYS=$(uname -s)
-	if [ $SYS = "Linux" ]; then # version is pertinent
-		VERSION=$(cat /etc/os-release | grep '^PRETTY_NAME' | sed 's/PRETTY_NAME=//' | sed 's/"//g')
+	SYS="$(uname -s)"
+	if [ "$SYS" = "Linux" ]; then # version is pertinent
+		VERSION="$(cat /etc/os-release | grep '^PRETTY_NAME' | sed 's/PRETTY_NAME=//' | sed 's/"//g')"
 	fi
-	CUR_USER=$(whoami)
+	curUser="$(whoami)"
 }
 
 newPass()
@@ -42,7 +41,7 @@ newPass()
 		echo -en "\n" # print newline
 		read -s -p "Confirm your password: " secondPass
 		echo -en "\n" # print newline
-		if [ $firstPass == $secondPass ]; then
+		if [ "$firstPass" == "$secondPass" ]; then
 			echo "$firstPass" > ~/.bpass
 			chmod 600 ~/.bpass # prevent peekers
 			break
@@ -59,38 +58,39 @@ newPass()
 getPassword()
 {
 	failCount=0
-	promptText=$1
-	if [[ -z $promptText ]]; then
+	promptText="$1"
+	if [[ -z "$promptText" ]]; then
 		echo -en "Internal error: function called with no argument. " >&2
 		echo -en "Exiting with status (2).\n" >&2
 		exit 2
 	fi
 	
-	SAVEDPASS=$(head -n 1 ~/.bpass)
+	SAVEDPASS="$(head -n 1 ~/.bpass)"
+	if [ -z "$SAVEDPASS" ]; then
+		return # no checking necessary
+	fi
 	
-	if [[ $ACCEPTPASS = 1 ]]; then # check for password
-		while [[ $failCount < 3 ]]; do
-			read -s -p "$promptText: " passEntered
-			echo ""
-			if [[ "$passEntered" = "$SAVEDPASS" ]]; then
-				break
+	while [[ $failCount < 3 ]]; do
+		read -s -p "$promptText: " passEntered
+		echo ""
+		if [[ "$passEntered" = "$SAVEDPASS" ]]; then
+			break
+		else
+			echo "Incorrect password"
+			let failCount=$failCount+1
+			if [[ $failCount = 3 ]]; then
+				echo "Goodbye"
+				exit 0
 			else
-				echo "Incorrect password"
-				let failCount=$failCount+1
-				if [[ $failCount = 3 ]]; then
-					echo "Goodbye"
-					exit 0
+				numTries=$((3-$failCount))
+				if [[ $numTries = 1 ]]; then
+					echo "You have $numTries more try"
 				else
-					numTries=$((3-$failCount))
-					if [[ $numTries = 1 ]]; then
-						echo "You have $numTries more try"
-					else
-						echo "You have $numTries more tries"
-					fi
+					echo "You have $numTries more tries"
 				fi
 			fi
-		done
-	fi
+		fi
+	done
 }
 
 # Process arguments with getopts
@@ -101,94 +101,69 @@ isTarred=0
 folderName="" # empty string
 
 ## options ##
-while getopts "fhor:tnp" OPTION; do
-	case $OPTION in
-		h)
-			helpMenu # function call
-			exit 0
-			;;
-		f) # set to full backup
-			full=1
-			;;
-		o) # set to overwrite mode
-			overwrite=1
-			;;
-		r)
-			restoreBack=$OPTARG
-			;;
-		t)
-			isTarred=1
-			;;
-		n)
-			folderName=$OPTARG
-			;;
-		p)
-			echo -en "You will be prompted for your old password before "
-			echo -en "you can select a new password.\n"
-			#optionalPromptText="Old "
-			getPassword "Old password" # returns if success
-			newPass # also returns upon success
-			;;
+getOptions()
+{
+	while getopts "fhor:tnp" OPTION; do
+		case $OPTION in
+			h)
+				usage # function call
+				exit 0
+				;;
+			f) # set to full backup
+				full=1
+				;;
+			o) # set to overwrite mode
+				overwrite=1
+				;;
+			r)
+				restoreBack=$OPTARG
+				;;
+			t)
+				isTarred=1
+				;;
+			n)
+				folderName=$OPTARG
+				;;
+			p) # new password
+				echo -en "You will be prompted for your old password "
+				echo -en "before you can select a new password.\n"
+				getPassword "Old password" # returns if success
+				newPass # also returns upon success
+				return 1
+				;;
+	
+			?)
+				usage # call function
+				exit 1
+				;;
+		esac
+	done
+	return 0
+}
 
-		?)
-			helpMenu # call funciton
-			exit 1
-			;;
-	esac
-done
-
-#for arg; do
-#	if [[ "$arg" = "--help" ]]; then
-#		helpMenu
-#		exit 0
-#	fi
-#	
-#	c=${arg:0:1}
-#	arg=${arg:1}
-#
-#	if [[ "$c" = "-" ]]; then
-#		while test -n "$arg"; do
-#			k=${arg:0:1}
-#
-#			if [ "$k" = "h" ]; then
-#				helpMenu
-#				exit 0
-#			elif [ "$k" = "f" ]; then # set to full backup
-#				full=1
-#			elif [ "$k" = "o" ]; then # set to overwrite mode
-#				overwrite=1
-#			elif [ "$k" = "r" ]; then
-#				restoreBack=1
-#			else
-#				echo "backup: invalid option -- '$k'"
-#				echo "Try 'backup --help' for more information."
-#				exit 1
-#			fi
-#			arg=${arg:1} # Trim the 1st character
-#		done
-#
-#	else
-#		echo "backup: invalid argument"
-#		echo "Try 'backup --help' for more information."
-#		exit 1
-#	fi
-#done
 
 ##########
 ## main ##
 ##########
 
-echo "Backup script"
 getEnv # gets information regarding the system this is run under
 
-# Password function
+if [ "$1" == "--help" ]; then
+	usage
+	exit 0
+fi
+
+getOptions $* # pass all arguments to this function
+firstPrompt=$?
+
+## Password function ##
 # Check for current password
-if [ ! -f ~/.bpass ] || [ "" = $(head -n 1 ~/.bpass) ]; then
+if [ ! -f ~/.bpass ]; then
 	# NEW PASSWORD
 	echo "You need to set your password"
 	newPass # function
 	# newPass() was success if returns here
-else
+elif [ $firstPrompt == 0 ]; then
 	getPassword "password"
 fi
 
@@ -204,7 +179,7 @@ IFS='
 '
 
 if [[ "$SYS" = "Linux" ]] && [[ "$VERSION" = "Ubuntu 13"* ]]; then
-	allMedia="/media/$CUR_USER"
+	allMedia="/media/$curUser"
 elif [ "$SYS" = "Linux" ]; then # normal drive array
 	allMedia="/media"
 elif [ "$SYS" = "Darwin" ]; then # Mac computer
@@ -282,8 +257,8 @@ else
 fi
 
 modifyName=0
-if [[ -z $folderName ]]; then
-	folderName="$CUR_USER$rightNow"
+if [[ -z "$folderName" ]]; then
+	folderName="$curUser$rightNow"
 	modifyName=1
 fi
 
@@ -342,7 +317,7 @@ fi
 echo "Copying your files to drive"
 cd $folderName
 
-echo "User: $CUR_USER" >> info.txt
+echo "User: $curUser" >> info.txt
 echo "These files were backed up on $rightNow" >> info.txt
 
 if [ $full = 1 ]; then
@@ -376,7 +351,7 @@ for k in $(find ~ -maxdepth 1 -not -name ".*" -type f); do # Miscellaneous files
 done
 
 if [[ $miscFiles = 1 ]]; then
-	echo " -miscellaneous files in /home/$CUR_USER directory" >> info.txt
+	echo " -miscellaneous files in /home/$curUser directory" >> info.txt
 fi
 
 

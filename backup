@@ -169,6 +169,7 @@ fi
 
 # Get date and time of backup
 echo "Accessing current date" 
+curTime=$(date +"%I:%M:%S") # used later
 rightNow=$(date +"%m_%d_%Y")
 echo "The current date is $rightNow"
 
@@ -317,8 +318,11 @@ fi
 echo "Copying your files to drive"
 cd $folderName
 
-echo "User: $curUser" >> info.txt
-echo "These files were backed up on $rightNow" >> info.txt
+# start of metadata
+compName="$(hostname)"
+echo -n "User: $curUser " >> info.txt
+echo "on computer: $compName" >> info.txt
+echo "These files were backed up at $curTime on $rightNow" >> info.txt
 
 if [ $full = 1 ]; then
 	echo "Full backup" >> info.txt

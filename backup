@@ -364,7 +364,7 @@ fi
 
 
 for k in $(find ~ -maxdepth 1 -not -name ".*" -type d); do
-	if [[ $full = 1 ]] || [[ $PARTIALTHRESH -gt $(getsize $k) ]]; then
+	if [ $full = 1 -o $PARTIALTHRESH -gt $(getsize $k) ]; then
 		echo " -$k" >> info.txt
 		eval cp $cpArgs $k .
 	fi
@@ -377,7 +377,7 @@ fi
 
 miscFiles=0 # default false
 for k in $(find ~ -maxdepth 1 -not -name ".*" -type f); do # Miscellaneous files
-	if [[ $full = 1 ]] || [[ $PARTIALTHRESH -gt $(getsize $k) ]]; then
+	if [ $full = 1 -o $PARTIALTHRESH -gt $(getsize $k) ]; then
 		eval cp $cpArgs $k . # nonrecursive
 		miscFiles=1
 	fi

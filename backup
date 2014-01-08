@@ -49,7 +49,7 @@ getsize()
 	else
 		# assume BSD
 		# must still implement
-		echo "$(du -sb $file | awk '{print $1;}')"
+		echo "$(du -c $file | awk '{print $1;}')"
 	fi
 }
 
@@ -210,6 +210,7 @@ else
 	exit 2
 fi
 
+usingDrive=1
 driveArray=(`ls $allMedia`)
 arrLen=${#driveArray[@]}
 if [[ $arrLen = 0 ]]; then
@@ -239,6 +240,7 @@ else
 		elif [[ $driveNum = $arrLen ]]; then
 			# backup onto folder on local drive
 			echo -en "" # do nothing
+			usingDrive=0
 			exit 3 # DEBUG
 
 
@@ -354,22 +356,29 @@ echo "Directories backed up:" >> info.txt
 
 ## Code below is to traverse subdirectories of ~ with loop ##
 
+if [ $usingDrive = 0 ]; then # not using a drive
+	cpArgs='-a'
+else
+	cpArgs='-L -r' # dereferences links
+fi
+
+
 for k in $(find ~ -maxdepth 1 -not -name ".*" -type d); do
 	if [[ $full = 1 ]] || [[ $PARTIALTHRESH -gt $(getsize $k) ]]; then
 		echo " -$k" >> info.txt
-		cp --dereference -r $k .
+		eval cp $cpArgs $k .
 	fi
 done
 
 if [[ $full = 1 ]]; then # Hidden files were previously ignored
-	cp --dereference -r ~/.??* .
+	eval cp $cpArgs ~/.??* .
 	echo " -hidden files and directories" >> info.txt
 fi
 
 miscFiles=0 # default false
 for k in $(find ~ -maxdepth 1 -not -name ".*" -type f); do # Miscellaneous files
 	if [[ $full = 1 ]] || [[ $PARTIALTHRESH -gt $(getsize $k) ]]; then
-		cp --dereference $k . # nonrecursive
+		eval cp $cpArgs $k . # nonrecursive
 		miscFiles=1
 	fi
 done

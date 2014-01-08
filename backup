@@ -9,6 +9,9 @@ PARTIALTHRESH=1000000 # folders larger than this won't be backed up for partial 
 
 ## DO NOT CHANGE BELOW THIS LINE ##
 
+
+## Functions ##
+
 usage()
 {
 # Here-doc to stdout
@@ -31,6 +34,23 @@ getEnv() # gets the environment the script is run on
 		VERSION="$(cat /etc/os-release | grep '^PRETTY_NAME' | sed 's/PRETTY_NAME=//' | sed 's/"//g')"
 	fi
 	curUser="$(whoami)"
+}
+
+getsize()
+{
+	file="$1"
+	if [ -z "$file" ]; then
+		echo "Blank file name. Internal failure. Exiting status (2)." >&2
+		exit 2
+	fi
+
+	if [ "$SYS" = "Linux" ]; then
+		echo "$(du -sb $file | awk '{print $1;}')"
+	else
+		# assume BSD
+		# must still implement
+		echo "$(du -sb $file | awk '{print $1;}')"
+	fi
 }
 
 newPass()
@@ -335,7 +355,7 @@ echo "Directories backed up:" >> info.txt
 ## Code below is to traverse subdirectories of ~ with loop ##
 
 for k in $(find ~ -maxdepth 1 -not -name ".*" -type d); do
-	if [[ $full = 1 ]] || [[ $PARTIALTHRESH -gt $(du -sb $k | awk '{print $1;}') ]]; then
+	if [[ $full = 1 ]] || [[ $PARTIALTHRESH -gt $(getsize $k) ]]; then
 		echo " -$k" >> info.txt
 		cp --dereference -r $k .
 	fi
@@ -348,7 +368,7 @@ fi
 
 miscFiles=0 # default false
 for k in $(find ~ -maxdepth 1 -not -name ".*" -type f); do # Miscellaneous files
-	if [[ $full = 1 ]] || [[ $PARTIALTHRESH -gt $(du -sb $k | awk '{print $1;}') ]]; then
+	if [[ $full = 1 ]] || [[ $PARTIALTHRESH -gt $(getsize $k) ]]; then
 		cp --dereference $k . # nonrecursive
 		miscFiles=1
 	fi

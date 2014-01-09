@@ -30,7 +30,7 @@ EOF
 getEnv() # gets the environment the script is run on
 {
 	SYS="$(uname -s)"
-	if [ "$SYS" = "Linux" ]; then # version is pertinent
+	if [ "$SYS" == "Linux" ]; then # version is pertinent
 		VERSION="$(cat /etc/os-release | grep '^PRETTY_NAME' | sed 's/PRETTY_NAME=//' | sed 's/"//g')"
 	fi
 	curUser="$(whoami)"
@@ -44,7 +44,7 @@ getsize()
 		exit 2
 	fi
 
-	if [ "$SYS" = "Linux" ]; then
+	if [ "$SYS" == "Linux" ]; then
 		echo "$(du -sb $file | awk '{print $1;}')"
 	else
 		# assume BSD
@@ -65,7 +65,7 @@ newPass()
 			echo "$firstPass" > ~/.bpass
 			chmod 600 ~/.bpass # prevent peekers
 			break
-		elif [ $numTries = 2 ]; then
+		elif [ $numTries == 2 ]; then
 			echo "Error: Too many attempts. Exiting with status (1)." >&2
 			exit 1
 		else
@@ -93,17 +93,17 @@ getPassword()
 	while [[ $failCount < 3 ]]; do
 		read -s -p "$promptText: " passEntered
 		echo ""
-		if [[ "$passEntered" = "$SAVEDPASS" ]]; then
+		if [[ "$passEntered" == "$SAVEDPASS" ]]; then
 			break
 		else
 			echo "Incorrect password"
 			let failCount=$failCount+1
-			if [[ $failCount = 3 ]]; then
+			if [[ $failCount == 3 ]]; then
 				echo "Goodbye"
 				exit 0
 			else
 				numTries=$((3-$failCount))
-				if [[ $numTries = 1 ]]; then
+				if [[ $numTries == 1 ]]; then
 					echo "You have $numTries more try"
 				else
 					echo "You have $numTries more tries"
@@ -199,11 +199,11 @@ echo "The current date is $rightNow"
 IFS='
 '
 
-if [[ "$SYS" = "Linux" ]] && [[ "$VERSION" = "Ubuntu 13"* ]]; then
+if [[ "$SYS" == "Linux" ]] && [[ "$VERSION" == "Ubuntu 13"* ]]; then
 	allMedia="/media/$curUser"
-elif [ "$SYS" = "Linux" ]; then # normal drive array
+elif [ "$SYS" == "Linux" ]; then # normal drive array
 	allMedia="/media"
-elif [ "$SYS" = "Darwin" ]; then # Mac computer
+elif [ "$SYS" == "Darwin" ]; then # Mac computer
 	allMedia="/Volumes"
 else
 	echo "Environment could not be detected. Exiting with status (2)." >&2
@@ -213,55 +213,57 @@ fi
 usingDrive=1
 driveArray=(`ls $allMedia`)
 arrLen=${#driveArray[@]}
-if [[ $arrLen = 0 ]]; then
-	echo "Error: no external drive connected. Terminating script" >&2
-	exit 1
-elif [[ $arrLen = 1 ]]; then
-	driveName=${driveArray[0]}
-else
-	# Loop over array and prompt for user selection of drive
-
-	# Echo available drives
-	echo "Multiple drives were found:"
-	c=0
-	for k in "${driveArray[@]}"; do
-		echo "$c: $k"
-		let c++
-	done
-	echo "$c: [Choose folder on local drive]"
-	echo "$(($c+1)): [Select to cancel]"
-
-	# Prompt for selection
-	while true; do
-		read -p "Select your drive by number: " driveNum
-		if [[ $driveNum = $(($arrLen + 1)) ]]; then
-			echo "Terminating script"
-			exit 0
-		elif [[ $driveNum = $arrLen ]]; then
-			# backup onto folder on local drive
-			echo -en "" # do nothing
-			usingDrive=0
-			exit 3 # DEBUG
+#if [[ $arrLen == 0 ]]; then
+#	echo "Error: no external drive connected. Terminating script" >&2
+#	exit 1
+#elif [[ $arrLen == 1 ]]; then
+#	driveName=${driveArray[0]}
+#else
 
 
-		
-		elif [[ $driveNum -gt -1 && $driveNum -lt $arrLen ]]; then
-			# Valid drive number
-			driveName="${driveArray[$driveNum]}"
-			break
-		else
-			echo "Invalid drive selection. Please select again"
-		fi
-	done
-fi
+# Loop over array and prompt for user selection of drive
 
-drivePresent=0 # default is false
+# Echo available drives
+echo "Backup Locations:"
+c=0
+for k in "${driveArray[@]}"; do
+	echo "$c: $k"
+	let c++
+done
+echo "$c: [Choose folder on local drive]"
+echo "$(($c+1)): [Select to cancel]"
+
+# Prompt for selection
+while true; do
+	read -p "Select your drive by number: " driveNum
+	if [[ $driveNum == $(($arrLen + 1)) ]]; then
+		echo "Terminating script"
+		exit 0
+	elif [[ $driveNum == $arrLen ]]; then
+		# backup onto folder on local drive
+		echo "Under construction" >&2
+		usingDrive=0
+		exit 3 # DEBUG
+
+
+	
+	elif [[ $driveNum -gt -1 && $driveNum -lt $arrLen ]]; then
+		# Valid drive number
+		driveName="${driveArray[$driveNum]}"
+		break
+	else
+		echo "Invalid drive selection. Please select again"
+	fi
+done
+#fi
+
+drivePresent=0 # assume not accessible yet
 cd "$allMedia/$driveName"
-if [ $? = 0 ]; then # cd was successful
+if [ $? == 0 ]; then # cd was successful
 	drivePresent=1
 fi
 
-if [ $drivePresent = 0 ]; then # Error with drive / drive not present
+if [ $drivePresent == 0 ]; then # Error with drive / drive not present
 	echo "There was an error in locating your drive. Terminating script" >&2
 	exit 1
 fi
@@ -285,16 +287,16 @@ if [[ -z "$folderName" ]]; then
 	modifyName=1
 fi
 
-if [[ "$full" = 1 ]]; then # full backup
+if [[ "$full" == 1 ]]; then # full backup
 	echo "Performing a FULL backup"
 	while [ true ]; do
 		read -p "Are you sure? " sureness
-		if [[ "$sureness" = "y" || "$sureness" = "yes" ]]; then
- 			if [[ $modifyName = 1 ]]; then
+		if [[ "$sureness" == "y" || "$sureness" == "yes" ]]; then
+ 			if [[ $modifyName == 1 ]]; then
 				folderName=$folderName"f"
 			fi
 			break
-		elif [[ "$sureness" = "n" || "$sureness" = "no" ]]; then
+		elif [[ "$sureness" == "n" || "$sureness" == "no" ]]; then
 			echo "Terminating script"
 			exit 0
 		else
@@ -307,18 +309,18 @@ else
 fi
 
 if [ -d $folderName ]; then
-	if [[ $overwrite = 1 ]]; then # Over write directory
+	if [[ $overwrite == 1 ]]; then # Over write directory
 		rm -r $folderName
 	else
 		echo "Folder $folderName already exists."
 		while [ true ]; do
 			read -p "Would you like to backup anyway? (y/n) " override 
-			if [ "$override" = "y" ]; then
+			if [ "$override" == "y" ]; then
 				while [ -d "$folderName" ]; do
 					folderName=$folderName"a"
 				done
 				break
-			elif [ "$override" = "n" ]; then
+			elif [ "$override" == "n" ]; then
 				echo "Goodbye"
 				exit 0;
 			else
@@ -346,7 +348,7 @@ echo -n "User: $curUser " >> info.txt
 echo "on computer: $compName" >> info.txt
 echo "These files were backed up at $curTime on $rightNow" >> info.txt
 
-if [ $full = 1 ]; then
+if [ $full == 1 ]; then
 	echo "Full backup" >> info.txt
 else
 	echo "Partial backup" >> info.txt
@@ -356,7 +358,7 @@ echo "Directories backed up:" >> info.txt
 
 ## Code below is to traverse subdirectories of ~ with loop ##
 
-if [ $usingDrive = 0 ]; then # not using a drive
+if [ $usingDrive == 0 ]; then # not using a drive
 	cpArgs='-a'
 else
 	cpArgs='-L -r' # dereferences links
@@ -364,26 +366,26 @@ fi
 
 
 for k in $(find ~ -maxdepth 1 -not -name ".*" -type d); do
-	if [ $full = 1 -o $PARTIALTHRESH -gt $(getsize $k) ]; then
+	if [ $full == 1 -o $PARTIALTHRESH -gt $(getsize $k) ]; then
 		echo " -$k" >> info.txt
 		eval cp $cpArgs $k .
 	fi
 done
 
-if [[ $full = 1 ]]; then # Hidden files were previously ignored
+if [[ $full == 1 ]]; then # Hidden files were previously ignored
 	eval cp $cpArgs ~/.??* .
 	echo " -hidden files and directories" >> info.txt
 fi
 
 miscFiles=0 # default false
 for k in $(find ~ -maxdepth 1 -not -name ".*" -type f); do # Miscellaneous files
-	if [ $full = 1 -o $PARTIALTHRESH -gt $(getsize $k) ]; then
+	if [ $full == 1 -o $PARTIALTHRESH -gt $(getsize $k) ]; then
 		eval cp $cpArgs $k . # nonrecursive
 		miscFiles=1
 	fi
 done
 
-if [[ $miscFiles = 1 ]]; then
+if [[ $miscFiles == 1 ]]; then
 	echo " -miscellaneous files in /home/$curUser directory" >> info.txt
 fi
 

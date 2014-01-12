@@ -5,7 +5,8 @@
 
 # Users may change the constants in this section
 
-PARTIALTHRESH=1000000 # folders larger than this won't be backed up for partial backups (default 1M)
+PARTIALTHRESH=1024 # folders larger than this won't be backed up for partial backups (default 1M)
+# size in kilobytes
 
 ## DO NOT CHANGE BELOW THIS LINE ##
 
@@ -45,11 +46,11 @@ getsize()
 	fi
 
 	if [ "$SYS" == "Linux" ]; then
-		echo "$(du -sb $file | awk '{print $1;}')"
+		echo "$(du -sk $file | awk '{print $1;}')" # size in kilobytes
 	else
 		# assume BSD
 		# must still implement
-		echo "$(du -c $file | awk '{print $1;}')"
+		echo "$(du -sk $file | awk '{print $1;}')"
 	fi
 }
 
@@ -201,7 +202,7 @@ IFS='
 
 if [[ "$SYS" == "Linux" ]] && [[ "$VERSION" == "Ubuntu 13"* ]]; then
 	allMedia="/media/$curUser"
-elif [ "$SYS" == "Linux" ]; then # normal drive array
+elif [ "$SYS" == "Linux" ]; then
 	allMedia="/media"
 elif [ "$SYS" == "Darwin" ]; then # Mac computer
 	allMedia="/Volumes"
@@ -213,13 +214,6 @@ fi
 usingDrive=1
 driveArray=(`ls $allMedia`)
 arrLen=${#driveArray[@]}
-#if [[ $arrLen == 0 ]]; then
-#	echo "Error: no external drive connected. Terminating script" >&2
-#	exit 1
-#elif [[ $arrLen == 1 ]]; then
-#	driveName=${driveArray[0]}
-#else
-
 
 # Loop over array and prompt for user selection of drive
 
@@ -361,11 +355,16 @@ echo "Directories backed up:" >> info.txt
 if [ $usingDrive == 0 ]; then # not using a drive
 	cpArgs='-a'
 else
-	cpArgs='-L -r' # dereferences links
+	cpArgs='-L -R' # dereferences links, -R is better supported
+	# should work under both BSD and GNU
 fi
 
 
-for k in $(find ~ -maxdepth 1 -not -name ".*" -type d); do
+# -maxdepth 1 gets ~/ and its subdirectories
+# -mindepth 1 eliminates ~/
+# -not -name ".*" eliminates hidden files
+# -type d is only directories
+for k in $(find ~ -mindepth 1 -maxdepth 1 -not -name ".*" -type d); do
 	if [ $full == 1 -o $PARTIALTHRESH -gt $(getsize $k) ]; then
 		echo " -$k" >> info.txt
 		eval cp $cpArgs $k .
@@ -377,8 +376,14 @@ if [[ $full == 1 ]]; then # Hidden files were previously ignored
 	echo " -hidden files and directories" >> info.txt
 fi
 
+
+# -maxdepth 1 gets ~/ and its subdirectories
+# -mindepth 1 eliminates ~/
+# -not -name ".*" eliminates hidden files
+# -type f is only regular files
+
 miscFiles=0 # default false
-for k in $(find ~ -maxdepth 1 -not -name ".*" -type f); do # Miscellaneous files
+for k in $(find ~ -mindepth 1 -maxdepth 1 -not -name ".*" -type f); do # Miscellaneous files
 	if [ $full == 1 -o $PARTIALTHRESH -gt $(getsize $k) ]; then
 		eval cp $cpArgs $k . # nonrecursive
 		miscFiles=1

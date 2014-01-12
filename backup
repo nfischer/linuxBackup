@@ -21,10 +21,16 @@ Usage: backup [OPTION]...
 
 Backs up files and subdirectories located in a user's home folder
 OPTIONS:
-  -f                backup all files and subdirectories
-  -h, --help        display this help menu
-  -o                overwrite the directory named with the given date
-  -r, --restore     restore an existing backup
+  -f                    backup all files and subdirectories (default is to
+                        backup dirs under a threshold size)
+  -h, --help            display this help menu
+  -n NAME               put your backup in folder called NAME
+  -o                    create a backup even if one has already been done that
+                        day
+  -p                    change your backup password
+  -r, --restore DIR     restore an existing backup DIR
+  -t                    compress your backup in a .tar.gz archive
+
 EOF
 } # Call exit after function call
 

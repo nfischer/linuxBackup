@@ -3,6 +3,9 @@ test*
 .test*
 *.diff
 
+*Error*
+*error*
+
 ## for vim ##
 *.swp
 *~

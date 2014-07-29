@@ -59,9 +59,9 @@ newPass()
 {
     numTries=0
     while [ $numTries -lt 3 ]; do
-        read -s -p "Enter your new password: " firstPass
+        read -s -p "Enter your new password: " firstPass 2>&1
         echo -en "\n" # print newline
-        read -s -p "Confirm your password: " secondPass
+        read -s -p "Confirm your password: " secondPass 2>&1
         echo -en "\n" # print newline
         if [ "$firstPass" == "$secondPass" ]; then
             echo "$firstPass" > ~/.bpass
@@ -93,7 +93,7 @@ getPassword()
     fi
 
     while [[ $failCount < 3 ]]; do
-        read -s -p "$promptText: " passEntered
+        read -s -p "$promptText: " passEntered 2>&1
         echo ""
         if [[ "$passEntered" == "$SAVEDPASS" ]]; then
             break
@@ -231,7 +231,7 @@ echo "$(($c+1)): [Select to cancel]"
 
 # Prompt for selection
 while true; do
-    read -p "Select your drive by number: " driveNum
+    read -p "Select your drive by number: " driveNum 2>&1
     if [[ $driveNum == $(($arrLen + 1)) ]]; then
         echo "Terminating script"
         exit 0
@@ -286,7 +286,7 @@ fi
 if [[ "$full" == 1 ]]; then # full backup
     echo "Performing a FULL backup"
     while [ true ]; do
-        read -p "Are you sure? " sureness
+        read -p "Are you sure? " sureness 2>&1
         if [[ "$sureness" == "y" || "$sureness" == "yes" ]]; then
             if [[ $modifyName == 1 ]]; then
                 folderName=$folderName"f"
@@ -310,7 +310,7 @@ if [ -d $folderName ]; then
     else
         echo "Folder $folderName already exists."
         while [ true ]; do
-            read -p "Would you like to backup anyway? (y/n) " override
+            read -p "Would you like to backup anyway? (y/n) " override 2>&1
             if [ "$override" == "y" ]; then
                 while [ -d "$folderName" ]; do
                     folderName=$folderName"a"

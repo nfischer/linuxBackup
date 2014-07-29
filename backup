@@ -200,10 +200,11 @@ echo "The current date is $rightNow"
 IFS='
 '
 
-if [[ "$SYS" == "Linux" ]] && [[ "$VERSION" == "Ubuntu 13"* ]]; then
-	allMedia="/media/$curUser"
-elif [ "$SYS" == "Linux" ]; then
+if [ "$SYS" == "Linux" ]; then
 	allMedia="/media"
+    if [[ "$VERSION" > "Ubuntu 13" ]]; then
+        allMedia="/media/$curUser"
+    fi
 elif [ "$SYS" == "Darwin" ]; then # Mac computer
 	allMedia="/Volumes"
 else

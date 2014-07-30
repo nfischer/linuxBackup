@@ -138,7 +138,9 @@ getOptions()
                 overwrite=1
                 ;;
             r)
-                restoreBack=$OPTARG
+                #restoreBack="$OPTARG"
+                restore
+                exit $?
                 ;;
             t)
                 isTarred=1
@@ -163,6 +165,30 @@ getOptions()
     return 0
 }
 
+getMediaDir()
+{
+    if [ "$SYS" == "Linux" ]; then
+        allMedia="/media"
+        if [[ "$VERSION" > "Ubuntu 13" ]]; then
+            allMedia="/media/$curUser"
+        fi
+    elif [ "$SYS" == "Darwin" ]; then # Mac computer
+        allMedia="/Volumes"
+    else
+        echo "Environment could not be detected. Exiting with status (2)." >&2
+        exit 2
+    fi
+    echo "$allMedia"
+}
+
+restore()
+{
+    ## Function to restore a previous backup
+
+    mediaDir=`getMediaDir`
+
+    return 0
+}
 
 ##########
 ## main ##
@@ -198,20 +224,11 @@ echo "The current date is $rightNow"
 # Select drive to backup onto
 
 # Handles spaces in filenames
+old_IFS="$IFS"
 IFS='
 '
 
-if [ "$SYS" == "Linux" ]; then
-    allMedia="/media"
-    if [[ "$VERSION" > "Ubuntu 13" ]]; then
-        allMedia="/media/$curUser"
-    fi
-elif [ "$SYS" == "Darwin" ]; then # Mac computer
-    allMedia="/Volumes"
-else
-    echo "Environment could not be detected. Exiting with status (2)." >&2
-    exit 2
-fi
+allMedia=$(getMediaDir)
 
 usingDrive=1
 driveArray=(`ls $allMedia`)
@@ -391,6 +408,7 @@ done
 echo " -miscellaneous files in $HOME directory" >> "$INFOFILE"
 
 
+IFS="$old_IFS"
 echo "Backup completed"
 exit 0
 

@@ -1,5 +1,4 @@
 #!/bin/bash
-# Version 3.0 updated 12/14/13
 
 ## GLOBAL CONSTANTS ##
 
@@ -125,7 +124,7 @@ folderName="" # empty string
 ## options ##
 getOptions()
 {
-    while getopts "fhor:tnp" OPTION; do
+    while getopts "fhortnp" OPTION; do
         case $OPTION in
             h)
                 usage # function call
@@ -185,7 +184,41 @@ restore()
 {
     ## Function to restore a previous backup
 
+    echo "Drive thingy"
+
     mediaDir=`getMediaDir`
+    driveArray=(`ls $mediaDir`)
+    arrLen=${#driveArray[@]}
+
+    # Echo available drives
+    echo "Select a drive:"
+    c=0
+    for k in "${driveArray[@]}"; do
+        echo "$c: $k"
+        let c++
+    done
+    echo "$c: [Select to cancel]"
+
+    # Prompt for selection
+    while true; do
+        read -p "Select your drive by number: " driveNum 2>&1
+        if [[ $driveNum == $arrLen ]]; then
+            echo "Terminating script"
+            exit 0
+        elif [[ $driveNum -gt -1 && $driveNum -lt $arrLen ]]; then
+            # Valid drive number
+            driveName="${driveArray[$driveNum]}"
+            break
+        else
+            echo "Invalid drive selection. Please select again"
+        fi
+    done
+
+    echo "Good job"
+    echo "$driveNum"
+
+
+
 
     return 0
 }

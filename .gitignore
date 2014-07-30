@@ -6,6 +6,8 @@ test*
 *Error*
 *error*
 
+*.pdf
+
 ## for vim ##
 *.swp
 *~

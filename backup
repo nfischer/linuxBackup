@@ -64,8 +64,11 @@ newPass()
         read -s -p "Confirm your password: " secondPass 2>&1
         echo -en "\n" # print newline
         if [ "$firstPass" == "$secondPass" ]; then
-            echo "$firstPass" > ~/.bpass
-            chmod 600 ~/.bpass # prevent peekers
+            if [ -f ~/.bpass ]; then
+                chmod 600 ~/.bpass
+            fi
+            echo "$firstPass" | shasum -a 256 > ~/.bpass
+            chmod 400 ~/.bpass # prevent peekers
             break
         elif [ $numTries == 2 ]; then
             echo "Error: Too many attempts. Exiting with status (1)." >&2
@@ -95,7 +98,8 @@ getPassword()
     while [[ $failCount < 3 ]]; do
         read -s -p "$promptText: " passEntered 2>&1
         echo ""
-        if [[ "$passEntered" == "$SAVEDPASS" ]]; then
+        passHash=`echo "$passEntered" | shasum -a 256`
+        if [[ "$passHash" == "$SAVEDPASS" ]]; then
             break
         else
             echo "Incorrect password"

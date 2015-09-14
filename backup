@@ -3,18 +3,12 @@
 
 ## GLOBAL CONSTANTS ##
 
-# Users may change the constants in this section
-
-PARTIALTHRESH=1024 # folders larger than this won't be backed up for partial backups (default 1M)
+PARTIALTHRESH=1024 # Don't back up folders larger than this for partial backups
 INFOFILE="info.txt"
-# size in kilobytes
-
-## DO NOT CHANGE BELOW THIS LINE ##
-
 
 ## Functions ##
 
-usage()
+function usage
 {
 # Here-doc to stdout
 cat 1>&2 << EOF
@@ -22,101 +16,101 @@ Usage: backup [OPTION]...
 
 Backs up files and subdirectories located in a user's home folder
 OPTIONS:
-  -f                backup all files and subdirectories
-  -h, --help        display this help menu
-  -o                overwrite the directory named with the given date
-  -r, --restore     restore an existing backup
+  -f              backup all files and subdirectories
+  -h, --help      display this help menu
+  -o              overwrite the directory named with the given date
+  -r, --restore   restore an existing backup
 EOF
 } # Call exit after function call
 
-getEnv() # gets the environment the script is run on
+function getEnv # gets the environment the script is run on
 {
-    SYS="$(uname -s)"
-    if [ "$SYS" == "Linux" ]; then # version is pertinent
-        VERSION="$(cat /etc/os-release | grep '^PRETTY_NAME' | sed 's/PRETTY_NAME=//' | sed 's/"//g')"
-    fi
-    curUser="$(whoami)"
+  SYS="$(uname -s)"
+  if [[ "${SYS}" == "Linux" ]]; then # version is pertinent
+    VERSION="$(cat /etc/os-release | grep '^PRETTY_NAME' | sed 's/PRETTY_NAME=//' | sed 's/"//g')"
+  fi
+  curUser="$(whoami)"
 }
 
 getsize()
 {
-    file="$1"
-    if [ -z "$file" ]; then
-        echo "Blank file name. Internal failure. Exiting status (2)." >&2
-        exit 2
-    fi
+  file="$1"
+  if [[ -z "${file}" ]]; then
+    echo "Blank file name. Internal failure. Exiting status (2)." >&2
+    exit 2
+  fi
 
-    if [ "$SYS" == "Linux" ]; then
-        echo "$(du -sk $file | awk '{print $1;}')" # size in kilobytes
-    else
-        # assume BSD
-        # must still implement
-        echo "$(du -sk $file | awk '{print $1;}')"
-    fi
+  if [[ "${SYS}" == "Linux" ]]; then
+    echo "$(du -sk ${file} | awk '{print $1;}')" # size in kilobytes
+  else
+    # assume BSD
+    # must still implement
+    echo "$(du -sk ${file} | awk '{print $1;}')"
+  fi
 }
 
 newPass()
 {
-    numTries=0
-    while [ $numTries -lt 3 ]; do
-        read -s -p "Enter your new password: " firstPass 2>&1
-        echo -en "\n" # print newline
-        read -s -p "Confirm your password: " secondPass 2>&1
-        echo -en "\n" # print newline
-        if [ "$firstPass" == "$secondPass" ]; then
-            if [ -f ~/.bpass ]; then
-                chmod 600 ~/.bpass
-            fi
-            echo "$firstPass" | shasum -a 256 > ~/.bpass
-            chmod 400 ~/.bpass # prevent peekers
-            break
-        elif [ $numTries == 2 ]; then
-            echo "Error: Too many attempts. Exiting with status (1)." >&2
-            exit 1
-        else
-            numTries=$(($numTries+1))
-            echo "Error: Passwords didn't match" >&2
-        fi
-    done
+  numTries=0
+  while [[ ${numTries} -lt 3 ]]; do
+    read -s -p "Enter your new password: " firstPass 2>&1
+    echo -en "\n" # print newline
+    read -s -p "Confirm your password: " secondPass 2>&1
+    echo -en "\n" # print newline
+    if [[ "${firstPass}" == "${secondPass}" ]]; then
+      if [[ -f ~/.bpass ]]; then
+        chmod 600 ~/.bpass
+      fi
+      echo "${firstPass}" | shasum -a 256 > ~/.bpass
+      chmod 400 ~/.bpass # prevent peekers
+      break
+    elif [[ ${numTries} == 2 ]]; then
+      echo "Error: Too many attempts. Exiting with status (1)." >&2
+      exit 1
+    else
+      numTries=$((${numTries}+1))
+      echo "Error: Passwords didn't match" >&2
+    fi
+  done
 }
 
 getPassword()
 {
-    failCount=0
-    promptText="$1"
-    if [[ -z "$promptText" ]]; then
-        echo -en "Internal error: function called with no argument. " >&2
-        echo -en "Exiting with status (2).\n" >&2
-        exit 2
-    fi
+  promptText="$1"
+  if [[ -z "${promptText}" ]]; then
+    echo -en "Internal error: function called with no argument. " >&2
+    echo -en "Exiting with status (2).\n" >&2
+    exit 2
+  fi
 
-    SAVEDPASS="$(head -n 1 ~/.bpass)"
-    if [ -z "$SAVEDPASS" ]; then
-        return # no checking necessary
-    fi
+  SAVEDPASS="$(head -n 1 ~/.bpass)"
+  if [[ -z "${SAVEDPASS}" ]]; then
+    return # no checking necessary
+  fi
 
-    while [[ $failCount < 3 ]]; do
-        read -s -p "$promptText: " passEntered 2>&1
-        echo ""
-        passHash=`echo "$passEntered" | shasum -a 256`
-        if [[ "$passHash" == "$SAVEDPASS" ]]; then
-            break
+  failCount=0
+  while [[ ${failCount} -lt 3 ]]; do
+    read -s -p "${promptText}: " passEntered 2>&1
+    echo ""
+    passHash=$(echo "${passEntered}" | shasum -a 256)
+    if [[ "${passHash}" == "${SAVEDPASS}" ]]; then
+      break
+    else
+      echo "Incorrect password"
+      failCount=$((${failCount}+1))
+      if [[ "${failCount}" -eq 3 ]]; then
+        echo "Goodbye"
+        exit 0
+      else
+        numTries=$((3-${failCount}))
+        if [[ "${numTries}" -eq 1 ]]; then
+          echo "You have ${numTries} more try"
         else
-            echo "Incorrect password"
-            let failCount=$failCount+1
-            if [[ $failCount == 3 ]]; then
-                echo "Goodbye"
-                exit 0
-            else
-                numTries=$((3-$failCount))
-                if [[ $numTries == 1 ]]; then
-                    echo "You have $numTries more try"
-                else
-                    echo "You have $numTries more tries"
-                fi
-            fi
+          echo "You have ${numTries} more tries"
         fi
-    done
+      fi
+    fi
+  done
 }
 
 # Process arguments with getopts
@@ -129,42 +123,42 @@ folderName="" # empty string
 ## options ##
 getOptions()
 {
-    while getopts "fhor:tnp" OPTION; do
-        case $OPTION in
-            h)
-                usage # function call
-                exit 0
-                ;;
-            f) # set to full backup
-                full=1
-                ;;
-            o) # set to overwrite mode
-                overwrite=1
-                ;;
-            r)
-                restoreBack=$OPTARG
-                ;;
-            t)
-                isTarred=1
-                ;;
-            n)
-                folderName=$OPTARG
-                ;;
-            p) # new password
-                echo -en "You will be prompted for your old password "
-                echo -en "before you can select a new password.\n"
-                getPassword "Old password" # returns if success
-                newPass # also returns upon success
-                return 1
-                ;;
+  while getopts "fhor:tnp" OPTION; do
+    case $OPTION in
+      h)
+        usage # function call
+        exit 0
+        ;;
+      f) # set to full backup
+        full=1
+        ;;
+      o) # set to overwrite mode
+        overwrite=1
+        ;;
+      r)
+        restoreBack=${OPTARG}
+        ;;
+      t)
+        isTarred=1
+        ;;
+      n)
+        folderName=${OPTARG}
+        ;;
+      p) # new password
+        echo -en "You will be prompted for your old password "
+        echo -en "before you can select a new password.\n"
+        getPassword "Old password" # returns if success
+        newPass # also returns upon success
+        return 1
+        ;;
 
-            ?)
-                usage # call function
-                exit 1
-                ;;
-        esac
-    done
-    return 0
+      ?)
+        usage # call function
+        exit 1
+        ;;
+    esac
+  done
+  return 0
 }
 
 
@@ -174,30 +168,31 @@ getOptions()
 
 getEnv # gets information regarding the system this is run under
 
-if [ "$1" == "--help" ]; then
-    usage
-    exit 0
+if [[ "$1" == "--help" ]]; then
+  usage
+  exit 0
 fi
 
+# DEBUG
 getOptions $* # pass all arguments to this function
 firstPrompt=$?
 
 ## Password function ##
 # Check for current password
-if [ ! -f ~/.bpass ]; then
-    # NEW PASSWORD
-    echo "You need to set your password"
-    newPass # function
-    # newPass() was success if returns here
-elif [ $firstPrompt == 0 ]; then
-    getPassword "password"
+if [[ ! -f ~/.bpass ]]; then
+  # NEW PASSWORD
+  echo "You need to set your password"
+  newPass # function
+  # newPass() was success if returns here
+elif [[ "${firstPrompt}" == 0 ]]; then
+  getPassword "password"
 fi
 
 # Get date and time of backup
 echo "Accessing current date"
 curTime=$(date +"%I:%M:%S") # used later
 rightNow=$(date +"%m_%d_%Y")
-echo "The current date is $rightNow"
+echo "The current date is ${rightNow}"
 
 # Select drive to backup onto
 
@@ -205,20 +200,20 @@ echo "The current date is $rightNow"
 IFS='
 '
 
-if [ "$SYS" == "Linux" ]; then
-    allMedia="/media"
-    if [[ "$VERSION" > "Ubuntu 13" ]]; then
-        allMedia="/media/$curUser"
-    fi
-elif [ "$SYS" == "Darwin" ]; then # Mac computer
-    allMedia="/Volumes"
+if [[ "${SYS}" == "Linux" ]]; then
+  allMedia="/media"
+  if [[ "${VERSION}" > "Ubuntu 13" ]]; then
+    allMedia="/media/${curUser}"
+  fi
+elif [[ "${SYS}" == "Darwin" ]]; then # Mac computer
+  allMedia="/Volumes"
 else
-    echo "Environment could not be detected. Exiting with status (2)." >&2
-    exit 2
+  echo "Environment could not be detected. Exiting with status (2)." >&2
+  exit 2
 fi
 
 usingDrive=1
-driveArray=(`ls $allMedia`)
+driveArray=(`ls ${allMedia}`)
 arrLen=${#driveArray[@]}
 
 # Loop over array and prompt for user selection of drive
@@ -227,172 +222,153 @@ arrLen=${#driveArray[@]}
 echo "Backup Locations:"
 c=0
 for k in "${driveArray[@]}"; do
-    echo "$c: $k"
-    let c++
+  echo "${c}: ${k}"
+  c=$((c+1))
 done
-echo "$c: [Choose folder on local drive]"
-echo "$(($c+1)): [Select to cancel]"
+echo "${c}: [Choose folder on local drive]"
+echo "$((${c}+1)): [Select to cancel]"
 
 # Prompt for selection
 while true; do
-    read -p "Select your drive by number: " driveNum 2>&1
-    if [[ $driveNum == $(($arrLen + 1)) ]]; then
-        echo "Terminating script"
-        exit 0
-    elif [[ $driveNum == $arrLen ]]; then
-        # backup onto folder on local drive
-        echo "Under construction" >&2
-        usingDrive=0
-        exit 3 # DEBUG
+  read -p "Select your drive by number: " driveNum 2>&1
+  if [[ ${driveNum} == $((${arrLen} + 1)) ]]; then
+    echo "Terminating script"
+    exit 0
+  elif [[ ${driveNum} == ${arrLen} ]]; then
+    # backup onto folder on local drive
+    echo "Under construction" >&2
+    usingDrive=0
+    exit 3 # DEBUG
 
 
 
-    elif [[ $driveNum -gt -1 && $driveNum -lt $arrLen ]]; then
-        # Valid drive number
-        driveName="${driveArray[$driveNum]}"
-        break
-    else
-        echo "Invalid drive selection. Please select again"
-    fi
+  elif [[ ${driveNum} -gt -1 && ${driveNum} -lt ${arrLen} ]]; then
+    # Valid drive number
+    driveName="${driveArray[${driveNum}]}"
+    break
+  else
+    echo "Invalid drive selection. Please select again"
+  fi
 done
 #fi
 
 drivePresent=0 # assume not accessible yet
-cd "$allMedia/$driveName"
-if [ $? == 0 ]; then # cd was successful
-    drivePresent=1
+cd "${allMedia}/${driveName}"
+if [[ $? == 0 ]]; then # cd was successful
+  drivePresent=1
 fi
 
-if [ $drivePresent == 0 ]; then # Error with drive / drive not present
-    echo "There was an error in locating your drive. Terminating script" >&2
-    exit 1
+if [[ "${drivePresent}" -eq 0 ]]; then # Error with drive / drive not present
+  echo "There was an error in locating your drive. Terminating script" >&2
+  exit 1
 fi
 
-echo "using drive $driveName"
+echo "using drive ${driveName}"
 
-if [ -d backup ]; then
-    cd backup
+if [[ -d backup ]]; then
+  cd backup
 else
-    mkdir backup
-    if [ $? != 0 ]; then
-        echo "Error in creating backup directory. Terminating script." >&2
-        exit 1
-    fi
-    cd backup
+  mkdir backup
+  if [[ $? != 0 ]]; then
+    echo "Error in creating backup directory. Terminating script." >&2
+    exit 1
+  fi
+  cd backup
 fi
 
 modifyName=0
-if [[ -z "$folderName" ]]; then
-    folderName="$curUser$rightNow"
-    modifyName=1
+if [[ -z "${folderName}" ]]; then
+  folderName="${curUser}${rightNow}"
+  modifyName=1
 fi
 
-if [[ "$full" == 1 ]]; then # full backup
-    echo "Performing a FULL backup"
-    while [ true ]; do
-        read -p "Are you sure? " sureness 2>&1
-        if [[ "$sureness" == "y" || "$sureness" == "yes" ]]; then
-            if [[ $modifyName == 1 ]]; then
-                folderName=$folderName"f"
-            fi
-            break
-        elif [[ "$sureness" == "n" || "$sureness" == "no" ]]; then
-            echo "Terminating script"
-            exit 0
-        else
-            echo "Error: Invalid input. Please enter (y/n):"
-            continue
-        fi
-    done
-else
-    echo "Performing a PARTIAL backup"
-fi
-
-if [ -d $folderName ]; then
-    if [[ $overwrite == 1 ]]; then # Over write directory
-        rm -r $folderName
+if [[ "${full}" -eq 1 ]]; then # full backup
+  echo "Performing a FULL backup"
+  while true; do
+    read -p "Are you sure? " sureness 2>&1
+    if [[ "${sureness}" == "y" || "${sureness}" == "yes" ]]; then
+      if [[ "${modifyName}" -eq 1 ]]; then
+        folderName=${folderName}"f"
+      fi
+      break
+    elif [[ "${sureness}" == "n" || "${sureness}" == "no" ]]; then
+      echo "Terminating script"
+      exit 0
     else
-        echo "Folder $folderName already exists."
-        while [ true ]; do
-            read -p "Would you like to backup anyway? (y/n) " override 2>&1
-            if [ "$override" == "y" ]; then
-                while [ -d "$folderName" ]; do
-                    folderName=$folderName"a"
-                done
-                break
-            elif [ "$override" == "n" ]; then
-                echo "Goodbye"
-                exit 0;
-            else
-                echo "Error: Invalid input. Enter (y/n):"
-                continue
-            fi
-        done
+      echo "Error: Invalid input. Please enter (y/n):"
+      continue
     fi
+  done
+else
+  echo "Performing a PARTIAL backup"
 fi
 
-echo "Creating folder $folderName"
-mkdir $folderName
-if [ $? != 0 ]; then
-    echo "Error in creating folder $folderName. Terminating script." >&2
-    exit 1
+if [[ -d "${folderName}" ]]; then
+  if [[ "${overwrite}" -eq 1 ]]; then # Over write directory
+    rm -r "${folderName}"
+  else
+    echo "Folder ${folderName} already exists."
+    while true; do
+      read -p "Would you like to backup anyway? (y/n) " override 2>&1
+      if [[ "${override}" == "y" ]]; then
+        while [[ -d "${folderName}" ]]; do
+          folderName="${folderName}a"
+        done
+        break
+      elif [[ "${override}" == "n" ]]; then
+        echo "Goodbye"
+        exit 0;
+      else
+        echo "Error: Invalid input. Enter (y/n):"
+        continue
+      fi
+    done
+  fi
+fi
+
+echo "Creating folder ${folderName}"
+mkdir "${folderName}"
+if [[ $? != 0 ]]; then
+  echo "Error in creating folder ${folderName.} Terminating script." >&2
+  exit 1
 fi
 
 # Copy files onto drive and document
 echo "Copying your files to drive"
-cd $folderName
+cd "${folderName}"
 
 # start of metadata
 compName="$(hostname)"
-echo -n "User: $curUser " >> "$INFOFILE"
-echo "@$compName" >> "$INFOFILE"
-echo "These files were backed up at $curTime on $rightNow" >> "$INFOFILE"
+echo -n "User: ${curUser} " >> "${INFOFILE}"
+echo "@${compName}" >> "${INFOFILE}"
+echo "These files were backed up at ${curTime} on ${rightNow}" >> "${INFOFILE}"
 
-if [ $full == 1 ]; then
-    echo "Full backup" >> "$INFOFILE"
+if [[ "${full}" -eq 1 ]]; then
+  echo "Full backup" >> "${INFOFILE}"
 else
-    echo "Partial backup" >> "$INFOFILE"
+  echo "Partial backup" >> "${INFOFILE}"
 fi
-echo -e "\nDirectories backed up:" >> "$INFOFILE"
+echo -e "\nDirectories backed up:" >> "${INFOFILE}"
 
 
 ## Code below is to traverse subdirectories of ~ with loop ##
 
-if [ $usingDrive == 0 ]; then # not using a drive
-    cpArgs='-a'
+if [[ ${usingDrive} == 0 ]]; then # not using a drive
+  cpArgs='-a'
 else
-    cpArgs='-L -R' # dereferences links, -R is better supported
-    # should work under both BSD and GNU
+  cpArgs='-L -R' # dereferences links, -R is better supported
+  # should work under both BSD and GNU
 fi
 
-# '-mindepth 1 -maxdepth 1' creates a list of the home directory's subdirectories
+# Create a list of the subdirs of the home directory
 for k in $(find ~ -mindepth 1 -maxdepth 1); do
-    if [ $full == 1 -o $PARTIALTHRESH -gt $(getsize $k) ]; then
-        echo " -$k" >> "$INFOFILE"
-        eval cp $cpArgs $k . 2>/dev/null
-    fi
+  if [ "${full}" == 1 -o "${PARTIALTHRESH}" -gt $(getsize "${k}") ]; then
+    echo " -${k}" >> "${INFOFILE}"
+    eval cp ${cpArgs} ${k} . 2>/dev/null
+  fi
 done
 
-#if [[ $full == 1 ]]; then # Hidden files were previously ignored
-#    eval cp $cpArgs ~/.??* .
-#    echo " -hidden files and directories" >> "$INFOFILE"
-#fi
-
-
-# -maxdepth 1 gets ~/ and its subdirectories
-# -mindepth 1 eliminates ~/
-# -not -name ".*" eliminates hidden files
-# -type f is only regular files
-
-#miscFiles=0 # default false
-#for k in $(find ~ -mindepth 1 -maxdepth 1 -not -name ".*" -type f); do # Miscellaneous files
-#    if [ $full == 1 -o $PARTIALTHRESH -gt $(getsize $k) ]; then
-#        eval cp $cpArgs $k . # nonrecursive
-#        miscFiles=1
-#    fi
-#done
-
-echo " -miscellaneous files in $HOME directory" >> "$INFOFILE"
+echo " -miscellaneous files in ${HOME} directory" >> "${INFOFILE}"
 
 
 echo "Backup completed"
